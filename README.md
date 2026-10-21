@@ -114,3 +114,13 @@ Gameloft 文件不随仓库分发。你需要自己提供：
 - 加载器/移植：EapRules 的 [mc3-native-arm](https://github.com/EapRules/mc3-native-arm)（GPL-3.0）
 - bionic ELF 加载器：gmloader-next (JohnnyonFlame) / Vita so-loader (Andy Nguyen)
 - 本仓库为上述项目的 Switch 适配；游戏本体版权归 Gameloft 所有，请自备数据。
+
+## 大气层 NSP 路线（进行中）
+
+按 shadowguardian-switch 的 AArch32 运行层路线把 mc3 加载器迁到大气层 NSP：
+- `nx-port-source/`  MC3 游戏粘合层（main/mc3_api/mc3_jni/mc3_input/mc3_audio/mc3_swp/mc3_atc/mc3_patch/mc3_video/mc3_stdio/dcr_config），全部 362 个符号导入表已生成（0 缺失，99 个 GL 入口走 Mesa32）
+- `nx-port-tools/`  导入表生成器/缓存、ELF32→NSO 转换脚本
+- `build.sh`        工具链装配 + 构建入口（devkitARM + libnx32 + mesa32 + switch-tools，无 Docker）
+- 数据要求：sd:/switch/mc3_nx/ 下 libModernCombat3.so（SHA256 99cd2fe3...）+ main.1120…obb（1342717349B）+ patch.11428…obb（81507652B），由 eapx 校验的原始数据放入即可
+
+Title ID 0x0100F5344D433300（ExeFS NSP，AArch32）。构建验证后此仓库将直接发布 mc3_nx.nsp。
