@@ -1,0 +1,8 @@
+build/
+*.elf
+mc3_nx.nsp
+mc3_nx.build
+__pycache__/
+*.pyc
+*.keys
+assets/mc3-icon-master.png

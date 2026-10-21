@@ -56,16 +56,20 @@ static void set_dir(const JMethod *m,const jvalue *a,jvalue *out,const char *tai
  *out=jv_l(jni_str(p));
  (void)m;(void)a;
 }
-static jvalue dev_query_false(const JMethod *m,const jvalue *a){return jv_z(0);(void)m;(void)a;}
-static jvalue dev_query_true(const JMethod *m,const jvalue *a){return jv_z(1);(void)m;(void)a;}
 int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  const char *c=m->cls->name,*n=m->name;
+ if((!strcmp(c,"video/MyVideoView") && !strcmp(n,"playMovie")) ||
+    ((!strcmp(c,"android/app/Activity") || is_mc3(c)) &&
+     (!strcmp(n,"startActivity") || !strcmp(n,"startActivityForResult")))){
+  mc3_video_play();*out=jv_none();return 1;
+ }
+
  if((!strcmp(c,"java/lang/System") && !strcmp(n,"currentTimeMillis")) || (is_mc3(c) && !strcmp(n,"GetCurrentTime"))){
   struct timespec ts;clock_gettime(CLOCK_REALTIME,&ts);*out=jv_j((int64_t)ts.tv_sec*1000+ts.tv_nsec/1000000);return 1;
  }
  if(!strcmp(c,"android/media/AudioTrack")){
   if(!strcmp(n,"<init>")){
-   if(self){self->v[0]=a[1].i;self->v[1]=((a[2].i&0xC)==0xC||(a[2].i&0x4)==0x4)?2:1;}
+   if(self){self->v[0]=a[1].i;self->v[1]=(a[2].i==12 || a[2].i==3)?2:1;}
    *out=jv_none();return 1;
   }
   if(!strcmp(n,"getMinBufferSize")){*out=jv_i(16384);return 1;}
@@ -79,10 +83,10 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
     size_t bytes=(size_t)len*2;
     unsigned char *buf=(unsigned char *)malloc(bytes?bytes:1);
     if(!buf){*out=jv_i(-2);return 1;}
-    const short *s=(const short *)o->a.data;
+    const short *s=(const short *)o->a.data+off;
     for(int i=0;i<len;i++){buf[2*i]=(unsigned char)s[i];buf[2*i+1]=(unsigned char)((unsigned)s[i]>>8);}
     int r=mc3_audio_write(buf,(unsigned)bytes,rate,channels);
-    free(buf);*out=jv_i(r);return 1;
+    free(buf);*out=jv_i(r<0?r:r/2);return 1;
    }
    *out=jv_i(mc3_audio_write((unsigned char *)o->a.data+off,len,rate,channels));return 1;
   }
@@ -116,8 +120,8 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
   *out=jv_none();return 1;
  }
  if(!strcmp(n,"Exit") || !strcmp(n,"sendAppToBackground")){debugPrintf("[mc3] original game requested exit\n");log_flush_ring();exit(0);}
- if(!strcmp(n,"getZipName")){set_dir(m,a,out,"/" MC3_MAIN_OBB);return 1;}
- if(!strcmp(n,"getPatchFileLocation")){set_dir(m,a,out,"/" MC3_PATCH_OBB);return 1;}
+ if(!strcmp(n,"getZipName")){char p[768];snprintf(p,sizeof p,"%s/" MC3_MAIN_OBB,mc3_resource_root());*out=jv_l(jni_str(p));return 1;}
+ if(!strcmp(n,"getPatchFileLocation")){char p[768];snprintf(p,sizeof p,"%s/" MC3_PATCH_OBB,mc3_resource_root());*out=jv_l(jni_str(p));return 1;}
  if(!strcmp(n,"getSaveFolder")){set_dir(m,a,out,"/data");return 1;}
  if(!strcmp(n,"getSDFolder")||!strcmp(n,"getFilesDir")){set_dir(m,a,out,NULL);return 1;}
  if(!strcmp(n,"getPath")||!strcmp(n,"getAbsolutePath")){*out=jv_l(jni_str("/sdcard/Android/obb/" MC3_PKG "/"));return 1;}

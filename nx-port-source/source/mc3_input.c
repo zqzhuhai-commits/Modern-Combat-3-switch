@@ -68,7 +68,16 @@ static void swipe_end(void) {
 }
 
 void mc3_input_release(void) {
-    if (joy) pad_left(0, 0, 1);
+    pad_left(0, 0, 1);
+    pad_right(0, 0, 2);
+    int *states[] = {&s_a,&s_b,&s_x,&s_y,&s_l1,&s_r1,&s_l2,&s_r2,
+                     &s_start,&s_select,&s_up,&s_down,&s_left,&s_right};
+    const int codes[] = {K_CENTER,K_MOVE_END,K_BTN_X,K_BTN_Y,K_BTN_L1,K_BTN_R1,
+                         K_MOVE_END,K_BTN_X,K_START,K_SELECT,K_UP,K_DOWN,K_LEFT,K_RIGHT};
+    for (unsigned i=0; i<sizeof(states)/sizeof(states[0]); ++i) {
+        if (*states[i]) key(codes[i], 0);
+        *states[i] = 0;
+    }
     joy = 0;
     swipe_end();
     if (click) touch(0, cx, cy, 55);

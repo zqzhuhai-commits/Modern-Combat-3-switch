@@ -28,6 +28,8 @@
 Mc3Api g_mc3_api;
 static so_module module;
 static int running;
+static int packaged_resources;
+const char *mc3_resource_root(void){return packaged_resources?"game:":dcr_game_root();}
 static EGLDisplay display;
 static EGLSurface surface;
 static EGLContext context;
@@ -56,20 +58,27 @@ static int verified(const char *path,uint64_t want_size,const char *want_sha256)
  * verification when it opens them). */
 static int required_data(void){
  char p[768];
- snprintf(p,sizeof p,"%s/libModernCombat3.so",dcr_game_root());
+ snprintf(p,sizeof p,"%s/libModernCombat3.so",mc3_resource_root());
  if(!verified(p,9766612,"99cd2fe38e4387c362c4435437e53d90c55ebea61e36695e49c8efdf1202d9b2")){
-  snprintf(p,sizeof p,"%s/lib/armeabi-v7a/libModernCombat3.so",dcr_game_root());
+  snprintf(p,sizeof p,"%s/lib/armeabi-v7a/libModernCombat3.so",mc3_resource_root());
   if(!verified(p,9766612,"99cd2fe38e4387c362c4435437e53d90c55ebea61e36695e49c8efdf1202d9b2")){
    stage("unsupported or missing original library");return -1;}
  }
  struct stat st;
- snprintf(p,sizeof p,"%s/" MC3_MAIN_OBB,dcr_game_root());
+ snprintf(p,sizeof p,"%s/" MC3_MAIN_OBB,mc3_resource_root());
  if(stat(p,&st)||st.st_size!=1342717349){debugPrintf("[mc3/data] main.obb missing or wrong size\n");return -1;}
- snprintf(p,sizeof p,"%s/" MC3_PATCH_OBB,dcr_game_root());
+ snprintf(p,sizeof p,"%s/" MC3_PATCH_OBB,mc3_resource_root());
  if(stat(p,&st)||st.st_size!=81507652){debugPrintf("[mc3/data] patch.obb missing or wrong size\n");return -1;}
  stage("original library and expansion packs present");return 0;
 }
 const char *port_path_fixup(const char *real,char *out,size_t cap){
+ if(!real || !out || !cap)return real;
+ const char *base=strrchr(real,'/');base=base?base+1:real;
+ if(!strcmp(base,MC3_MAIN_OBB) || !strcmp(base,MC3_PATCH_OBB)){
+  char name[128];snprintf(name,sizeof name,"%s",base);
+  snprintf(out,cap,"%s/%s",mc3_resource_root(),name);return out;
+ }
+
  /* The engine's hardcoded Android paths map into the game root: the two
   * expansion packs read from /sdcard/Android/obb/<pkg>, saves and logs write
   * under /data/data/<pkg>. */
@@ -90,8 +99,8 @@ const char *port_path_fixup(const char *real,char *out,size_t cap){
 }
 static int load_game(void){
  if(required_data())return -1;
- char path[768];snprintf(path,sizeof path,"%s/libModernCombat3.so",dcr_game_root());
- if(access(path,F_OK))snprintf(path,sizeof path,"%s/lib/armeabi-v7a/libModernCombat3.so",dcr_game_root());
+ char path[768];snprintf(path,sizeof path,"%s/libModernCombat3.so",mc3_resource_root());
+ if(access(path,F_OK))snprintf(path,sizeof path,"%s/lib/armeabi-v7a/libModernCombat3.so",mc3_resource_root());
  stage("load ELF");if(dcr_self_process()==INVALID_HANDLE){stage("process handle unavailable");return -1;}
  int rc=so_load(&module,path,NULL,PORT_SO_REGION_BYTES);if(rc){debugPrintf("[mc3] so_load=%d\n",rc);return -1;}
  if(so_relocate(&module)){stage("relocation failed");return -1;}
@@ -133,9 +142,9 @@ typedef void (*v2e_fn)(void *,void *,void *);
 typedef void (*v4e_fn)(void *,void *,int,int);
 typedef void (*v1e2_fn)(void *,void *,int,int);
 static void call_v0(uintptr_t p){((v0_fn)p)();}
-static void call_v1e(uintptr_t p,void *a){((v1e_fn)p)(a,NULL);}
-static void call_v2e(uintptr_t p,void *a,void *b){((v2e_fn)p)(a,b,NULL);}
-static void call_v4e(uintptr_t p,void *a,int x,int y){((v4e_fn)p)(a,NULL,x,y);}
+static void call_v1(uintptr_t p,void *a){((v1e_fn)p)(a,NULL);}
+static void call_v2(uintptr_t p,void *a,void *b){((v1e_fn)p)(a,b);}
+static void call_v3(uintptr_t p,void *a,void *b){((v2e_fn)p)(a,b,NULL);}
 static int run_game(void){
  stage("initialize JNI object model");jni_init();
  extern int g_so_trace_ctors;g_so_trace_ctors=1;
@@ -155,13 +164,13 @@ static int run_game(void){
  stage("JNI_OnLoad returned; unlocking GDRM");
  mc3_unlock_drm(&module);
  mc3_input_init();
- call_v1e(g_mc3_api.gl_init,env,gl_class);
- if(g_mc3_api.billing_init)call_v2e(g_mc3_api.billing_init,env,game_class);
- if(g_mc3_api.video_init)call_v1e(g_mc3_api.video_init,env);
- if(g_mc3_api.game_init)call_v1e(g_mc3_api.game_init,env,game_thiz);
- if(g_mc3_api.game_mc3_init)call_v1e(g_mc3_api.game_mc3_init,env,game_class);
+ call_v2(g_mc3_api.gl_init,env,gl_class);
+ if(g_mc3_api.billing_init)call_v3(g_mc3_api.billing_init,env,game_class);
+ if(g_mc3_api.video_init)call_v1(g_mc3_api.video_init,env);
+ if(g_mc3_api.game_init)call_v2(g_mc3_api.game_init,env,game_thiz);
+ if(g_mc3_api.game_mc3_init)call_v2(g_mc3_api.game_mc3_init,env,game_class);
  if(g_mc3_api.view_settings)call_v0(g_mc3_api.view_settings);
- if(g_mc3_api.resize)call_v4e(g_mc3_api.resize,env,MC3_WIDTH,MC3_HEIGHT);
+ if(g_mc3_api.resize)((v4e_fn)g_mc3_api.resize)(env,gl_class,MC3_WIDTH,MC3_HEIGHT);
  stage("native bootstrap returned; entering frame loop");
  running=1;
  unsigned frames=0;
@@ -182,6 +191,9 @@ static int run_game(void){
 int main(int argc,char **argv){
  (void)argc;(void)argv;const char *root=dcr_game_root();mkdir(root,0777);
  log_init(root);log_console_open();log_console_show_text();
+ Result asset_rc=romfsMountFromCurrentProcess("game");
+ packaged_resources=R_SUCCEEDED(asset_rc);
+ debugPrintf("[mc3/data] packaged resources=%d mount=0x%08x\n",packaged_resources,(unsigned)asset_rc);
  debugPrintf("Modern Combat 3: Fallen Nation runtime / NSP bring-up / gameplay unverified\n");
  dcr_report_boot();if(chdir(root))debugPrintf("[mc3] root chdir failed\n");
  dcr_config_load();dcr_time_init();dcr_path_prepare_dirs();

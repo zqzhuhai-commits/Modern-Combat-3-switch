@@ -12,10 +12,19 @@
 #define MC3_CLASS "com/gameloft/android/ANMP/GloftM3HM/"
 #define MC3_MAIN_OBB "main.1120.com.gameloft.android.ANMP.GloftM3HM.obb"
 #define MC3_PATCH_OBB "patch.11428.com.gameloft.android.ANMP.GloftM3HM.obb"
+const char *mc3_resource_root(void);
+void mc3_video_play(void);
 extern Mc3Api g_mc3_api;
 extern void *g_jni_env;
-extern const JMethodDef jni_method_defs[];
-extern const JFieldDef jni_field_defs[];
-extern const char *const jni_class_supers[][2];
-extern const char *const jni_missing_classes[];
+#include "so_util.h"
+extern void mc3_unlock_drm(so_module *mod);
+extern void mc3_swp_region(uint32_t begin, uint32_t end);
+extern uint32_t mc3_swp_count(void);
+extern void mc3_input_init(void);
+extern int  mc3_input_poll(void);
+extern void mc3_input_release(void);
+extern void mc3_audio_pause(int pause);
+extern void mc3_audio_close(void);
+extern void mc3_video_tick(void);
+extern void mc3_jni_check(const char *stage);
 #endif

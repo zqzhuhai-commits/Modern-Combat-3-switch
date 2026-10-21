@@ -19,7 +19,7 @@ for i,(_,off,addr,_,size,mem,flags,align) in enumerate(segments):
  if off+size>len(d) or mem<size or addr%4096:raise SystemExit('Invalid load segment')
  if flags != (5,4,6)[i]:raise SystemExit('Unexpected load segment permissions')
  b=d[off:off+size]
- struct.pack_into('<4I',h,0x10+i*0x10,256+len(payload),addr,size,mem-size if i==2 else 1)
+ struct.pack_into('<4I',h,0x10+i*0x10,256+len(payload),addr,size,mem-size if i==2 else 0)
  struct.pack_into('<I',h,0x60+4*i,size)
  h[0xa0+32*i:0xc0+32*i]=hashlib.sha256(b).digest();payload.extend(b)
 a.nso.parent.mkdir(parents=True,exist_ok=True);a.nso.write_bytes(h+payload)

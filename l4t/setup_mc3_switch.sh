@@ -65,7 +65,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
 echo "== Verifying armhf GL stack =="
 _LD=/lib/ld-linux-armhf.so.3
 if [ ! -e "$_LD" ]; then
-  echo "ERROR: $(_LD) not found — armhf base not installed."
+  echo "ERROR: ${_LD} not found — armhf base not installed."
   exit 1
 fi
 for _so in libEGL.so.1 libGLESv2.so.2 libSDL2-2.0.so.0 libgbm.so.1; do

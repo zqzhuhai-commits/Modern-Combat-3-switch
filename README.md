@@ -1,126 +1,58 @@
-# Modern Combat 3: Fallen Nation — Switch
+# 现代战争3:堕落国度 — Switch 移植开发
 
-让 Gameloft《现代战争3：失落国度》(v1.1.7g, 2011) 在 **Nintendo Switch** 上运行的工程。
+当前是 AArch32 运行时开发版，已重新编译；尚未通过 Switch 实机验证。
 
-核心加载器来自 [EapRules/mc3-native-arm](https://github.com/EapRules/mc3-native-arm)
-（GPL-3.0）：一个 bionic/JNI 兼容加载器，在 Linux 上直接加载游戏原版
-`libModernCombat3.so`（armeabi-v7a），无模拟、无重编译、完整手柄映射。
-本仓库将其适配到 Switch 的两种可行运行环境，并提供一键配置脚本。
+`build.sh` 生成的 `mc3_nx.nsp` 只有裸 ExeFS 内容，供后续封装使用，不能当成 DBI 可安装的完整 NSP。历史上提交的同名文件已从本开发分支移除。完整安装包需要 Program、Control、Meta NCA 与 CNMT，并包含游戏数据的 RomFS。
 
----
+## 已恢复的修复
 
-## ⚠️ 先说清楚：为什么没有 NSP
+- 补齐公共运行时；纠正源码目录、构建工具路径和 JNI 初始化调用。
+- 根据原版库的导出表修正 `Java_video_MyVideoView_Init` / `SetFinished`。
+- 修正 AudioTrack 短数组写入的偏移、返回单位和单声道配置；失焦时释放输入。
+- 接通 ATC 纹理解码与 GLES2 上传；接通过场跳过的两个 Java 调用入口。
+- 优先读取包内 `game:/` RomFS 的原版库和 OBB；存档、配置、日志继续放在 SD 卡目录。
+- 中文标题为“现代战争3:堕落国度”，图标位于 `assets/mc3-icon-256.jpg`。菜单中文名称不代表游戏正文已汉化。
 
-游戏的引擎核心 `libModernCombat3.so` 是 **32 位 ARM（armeabi-v7a）闭源二进制**，
-只有这一种架构。Switch 的 Horizon 系统（大气层所在系统）内核 **只支持 64 位程序**，
-没有 32 位兼容层，也没有 Android 运行时。因此**不存在能在大气层里直接安装运行的
-NSP**——这与移植技巧无关，是 CPU 指令集与系统 ABI 层面的硬限制。
+## 构建
 
-要在 Switch 上玩到它，现实路线只有两条，都需要在 TF 卡上装一个第二系统
-（**大气层原样保留**，Hekate 启动时二选一）：
+需要 Python 3.12+、make 和宿主编译工具。构建工具不随源码分发，可执行：
 
-| 路线 | 位置 | 体验 | 代价 |
-|---|---|---|---|
-| **A. Android** | [`android/`](android/README.md) | 原生 APK + Tegra 原生 GPU，最稳 | 触摸操作用映射工具（Panda Gamepad Pro） |
-| **B. Ubuntu (L4T) + 加载器** | [`l4t/`](l4t/README.md) | 手柄直连 + 触摸指针模式，原版移植体验 | 32 位软件渲染（llvmpipe），性能一般 |
-
-两条路线共用一个数据源（玩家自带的 v1.1.7g APK + 两个 OBB），eapx 会在首次
-启动时自动导入并做 SHA-256 校验。
-
----
-
-## 安装（二选一）
-
-### 路线 A：Switchroot Android
-
-1. 按 [switchroot.org](https://wiki.switchroot.org/en/Android/Setup-Guide) 在
-   TF 卡上安装 Android 双系统（Hekate 引导，大气层不变）。
-2. 安装 `Modern Combat 3.apk`（v1.1.7g），把两个 OBB 放到
-   `sdcard/Android/obb/com.gameloft.android.ANMP.GloftM3HM/`。
-3. 用 Panda Gamepad Pro 把触摸区域映射到手柄按键。
-   详见 [`android/README.md`](android/README.md)。
-
-### 路线 B：Switchroot Ubuntu + 加载器
-
-1. 按 [switchroot.org](https://wiki.switchroot.org/en/Linux/Ubuntu-Install) 在
-   TF 卡上安装 Ubuntu 20.04+（L4T）双系统。
-2. 拷贝 `loader/` 全部内容 + `l4t/` 脚本到 Switch 的 Ubuntu（如 `~/mc3/`），
-   执行一次 `sudo bash setup_mc3_switch.sh`（自动配 armhf 多架构 + 依赖）。
-3. 放入游戏数据（APK + OBB 丢进目录，首启自动导入），`bash run_mc3.sh` 开玩。
-   详见 [`l4t/README.md`](l4t/README.md)。
-
----
-
-## 操作说明（加载器版）
-
-| 控制 | 动作 |
-|---|---|
-| 左摇杆 | 移动 |
-| 右摇杆 | 视角 / 瞄准 |
-| R1 | 开火 |
-| L1 | 机瞄 |
-| R2 / X | 换弹 |
-| L2 / B | 手雷 |
-| D-pad 上 | 冲刺 |
-| D-pad 下 | 下蹲 / 掩体 |
-| D-pad 左右 | 切枪 |
-| Start | 暂停菜单 |
-| A | 确认 |
-
-**指针模式（按住 SELECT）**：部分提示（近战图标、暂停菜单按钮）只响应触摸，
-按住 SELECT 呼出指针：右摇杆移动，A/R1 点击，方向键滑动手势
-（对角线 = 快速按两个方向键）。
-
-可调环境变量：`MC3_RPAD_SCALE`（视角速度%）、`MC3_RPAD_INVERT_Y`、
-`MC3_SCALE`（fit/stretch）、`MC3_NO_AUDIO`。
-
----
-
-## 游戏数据（Bring Your Own Game）
-
-Gameloft 文件不随仓库分发。你需要自己提供：
-
-- **APK**：Modern Combat 3 v1.1.7g（native lib 的 SHA1 必须是
-  `be0d5e8779899e081a538b3930ec711d2df8aeb4`，启动时强校验）
-- **main.1120.com.gameloft.android.ANMP.GloftM3HM.obb**（约 1.34GB）
-- **patch.11428.com.gameloft.android.ANMP.GloftM3HM.obb**（约 81MB）
-
-文件名无所谓，eapx 按内容识别并校验（SHA-256 + 关键区比对）。
-校验参数见 [`loader/mc3.eapx.json`](loader/mc3.eapx.json)。
-
-## 目录结构
-
-```
-├── README.md          本文件
-├── LICENSE            GPL-3.0（加载器及脚本）
-├── NOTICE.md          第三方代码与许可证
-├── l4t/               Ubuntu 路线：启动脚本 + 一键环境配置 + 说明
-│   ├── run_mc3.sh
-│   ├── setup_mc3_switch.sh
-│   └── README.md
-├── android/           Android 路线：安装与手柄映射说明
-│   └── README.md
-└── loader/            PortMaster 加载器（可再分发部分，不含游戏数据）
-    ├── mc3            armhf 加载器二进制
-    ├── libs.armhf/    依赖闭包（libz/libzip/libbsd/libstdc++ 等）
-    ├── eapx.py        数据导入校验工具
-    ├── mc3.eapx.json  eapx 配方（SHA-256 / 关键区）
-    ├── mc3.gptk       手柄配置（本移植中按键由加载器直连，未用 gptokeyb）
-    └── licenses/      各依赖许可证
+```bash
+python3 nx-port-tools/bootstrap_toolchain.py
+bash build.sh
 ```
 
-## 致谢与许可
+工具链默认放在仓库的兄弟目录 `toolchain/`；也可通过 `MC3_TOOLCHAIN_ROOT`、`DEVKITPRO`、`DEVKITARM` 和 `PORTLIBS` 指定已安装环境。恢复脚本使用固定 SHA-256 的 vita2hos 容器层、libnx32 4.12.0 和 mesa32 release。下载需要网络访问 GHCR/GitHub；宿主平台为 Linux x86_64。
 
-- 加载器/移植：EapRules 的 [mc3-native-arm](https://github.com/EapRules/mc3-native-arm)（GPL-3.0）
-- bionic ELF 加载器：gmloader-next (JohnnyonFlame) / Vita so-loader (Andy Nguyen)
-- 本仓库为上述项目的 Switch 适配；游戏本体版权归 Gameloft 所有，请自备数据。
+公共运行时来自 `zqzhuhai-commits/shadowguardian-switch` 的 `runtime/`，固定于提交 `8877f2d991ba624fb54cd0f715f642e850b78ad3`，保留其 MIT 许可。原项目加载器与游戏粘合代码的许可证见 LICENSE、NOTICE.md 与文件头。
 
-## 大气层 NSP 路线
+## 封装完整测试 NSP
 
-按 shadowguardian-switch 的 AArch32 运行层路线把 mc3 加载器迁到大气层 NSP：
-- `nx-port-source/`  MC3 游戏粘合层（main/mc3_api/mc3_jni/mc3_input/mc3_audio/mc3_swp/mc3_atc/mc3_patch/mc3_video/mc3_stdio/dcr_config），全部 362 个符号导入表已生成（0 缺失，99 个 GL 入口走 Mesa32）
-- `nx-port-tools/`  导入表生成器/缓存、ELF32→NSO 转换脚本
-- `build.sh`        工具链装配 + 构建入口（devkitARM + libnx32 + mesa32 + switch-tools，无 Docker）
-- 数据要求：sd:/switch/mc3_nx/ 下 libModernCombat3.so（SHA256 99cd2fe3...）+ main.1120…obb（1342717349B）+ patch.11428…obb（81507652B），由 eapx 校验的原始数据放入即可
+请自备 Android v1.1.7g 的以下三个文件；打包脚本按 `loader/mc3.eapx.json` 严格检查大小和 SHA-256：
 
-Title ID 0x0100F5344D433300（ExeFS NSP，AArch32）。**mc3_nx.nsp 已构建**（6.5MB，ExeFS，AArch32，与 shadowguardian-switch 同一运行时管线）。安装：把 mc3_nx.nsp 用安装器（DBI/Tinfoil/awOO）安装到大气层，游戏数据放到 sd:/switch/mc3_nx/（libModernCombat3.so + main.1120…obb + patch.11428…obb，即 eapx 校验后的原始文件）。
+- `libModernCombat3.so`，9,766,612 字节，来自 APK 的 armeabi-v7a 目录。
+- `main.1120.com.gameloft.android.ANMP.GloftM3HM.obb`，1,342,717,349 字节。
+- `patch.11428.com.gameloft.android.ANMP.GloftM3HM.obb`，81,507,652 字节。
+
+编译完成后，使用本地 hacBrewPack 和自己的打包密钥：
+
+```bash
+python3 nx-port-tools/package_installable.py \
+  --data-dir /path/to/validated-game-files \
+  --keys /private/path/prod.keys \
+  --packer /path/to/hacbrewpack \
+  --nacptool ../toolchain/v2h-root/opt/devkitpro/tools/bin/nacptool \
+  --output /path/to/test-nsp-output
+```
+
+脚本把原版数据放入 Program RomFS，生成中文 NACP 和菜单图标，使用 Title ID `0100F5344D433300`。输出是需要大气层环境和实机验证的测试包，不应宣称已验证安装或通关。密钥与原版游戏数据不会写入源码树。
+
+## 验证范围与后续
+
+交叉编译、ELF32→NSO 段哈希检查、缓存导入表扫描、ATC 上传宿主测试和脚本语法检查已通过。当前诊断启动界面需按 A 才进入游戏初始化，PLUS 退出；游戏内 PLUS+MINUS 退出。日志与存档目录为 `sd:/switch/mc3_nx/`。
+
+尚待实机验证：安装、JNI 剩余调用、游戏主菜单与任务加载、纹理和着色器、声音、存档、HOME/休眠恢复、掌机/底座模式。过场当前按参考移植方式跳过，不提供视频播放实现。
+
+2026-10-22 恢复时，原资源链接已返回 HTTP 403，当前没有重新生成完整 NSP。此前生成但未保存的完整封装产物已丢失；需要重新提供资源包后重打包。详见 `REVIEW-2026-10-22.md`。
+
+Android 和 Switchroot Linux 的独立运行说明分别保留在 `android/` 与 `l4t/`。

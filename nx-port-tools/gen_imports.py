@@ -46,7 +46,8 @@ Run it from the port's folder (the runtime at runtime/):
 import argparse, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RUNTIME = os.path.dirname(HERE)
+RUNTIME = (os.path.join(os.path.dirname(HERE), "runtime")
+           if os.path.basename(HERE) == "nx-port-tools" else os.path.dirname(HERE))
 RUNTIME_SRC = os.path.join(RUNTIME, "source")
 
 # Functions whose bionic (armeabi-v7a) and newlib (devkitARM) signatures, types

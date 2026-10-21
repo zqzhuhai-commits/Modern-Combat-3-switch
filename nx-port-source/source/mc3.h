@@ -12,6 +12,8 @@
 #define MC3_CLASS "com/gameloft/android/ANMP/GloftM3HM/"
 #define MC3_MAIN_OBB "main.1120.com.gameloft.android.ANMP.GloftM3HM.obb"
 #define MC3_PATCH_OBB "patch.11428.com.gameloft.android.ANMP.GloftM3HM.obb"
+const char *mc3_resource_root(void);
+void mc3_video_play(void);
 extern Mc3Api g_mc3_api;
 extern void *g_jni_env;
 #include "so_util.h"
