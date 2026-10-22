@@ -28,6 +28,24 @@ static void finish(void *env,void *cls){assert(env==g_jni_env);assert(cls==jni_c
 static int invoke(JObj *self,const char *cls,const char *name,const char *sig,const jvalue *a,jvalue *out){JClass c={0};JMethod m={0};snprintf(c.name,sizeof c.name,"%s",cls);m.cls=&c;snprintf(m.name,sizeof m.name,"%s",name);snprintf(m.sig,sizeof m.sig,"%s",sig);return port_jni_invoke(self,&m,a,out);}
 int main(void){
  JObj track={0};jvalue a[6]={0},out;
+ /* First-frame language must be a real, nonempty Java string. */
+ assert(invoke(NULL,"com/gameloft/glf/GL2JNILib","getDeviceLanguage","()Ljava/lang/String;",a,&out));
+ assert(out.l && ((JObj *)out.l)->kind==JK_STRING && !strcmp(jni_utf(out.l),"en"));
+ assert(invoke(NULL,MC3_CLASS "GloftM3HM","getDeviceLanguage","()Ljava/lang/String;",a,&out));
+ assert(out.l && !strcmp(jni_utf(out.l),"en"));
+ assert(!invoke(NULL,"unrelated/Class","getDeviceLanguage","()Ljava/lang/String;",a,&out));
+ assert(!invoke(NULL,"com/gameloft/glf/GL2JNILib","getDeviceLanguage","()I",a,&out));
+ const char *service_classes[]={"android/content/Context","android/app/Activity",MC3_CLASS "GloftM3HM"};
+ const char *services[]={"phone","window","input_method","audio"};
+ const char *answers[]={"android/telephony/TelephonyManager","android/view/WindowManager","android/view/inputmethod/InputMethodManager","android/media/AudioManager"};
+ for(unsigned i=0;i<3;i++)for(unsigned j=0;j<4;j++){
+  a[0]=jv_l(jni_str(services[j]));
+  assert(invoke(NULL,service_classes[i],"getSystemService","(Ljava/lang/String;)Ljava/lang/Object;",a,&out));
+  assert(out.l && !strcmp(jni_utf(out.l),answers[j]));
+ }
+ assert(!invoke(NULL,"unrelated/Class","getSystemService","(Ljava/lang/String;)Ljava/lang/Object;",a,&out));
+ assert(invoke(NULL,"android/os/Process","setThreadPriority","(I)V",a,&out));
+
  a[1]=jv_i(44100);a[2]=jv_i(4);assert(invoke(&track,"android/media/AudioTrack","<init>","(IIIIII)V",a,&out));assert(track.v[1]==1);
  JObj *samples=jni_array('S',5);short data[]={100,0x1234,-2,300,400};memcpy(samples->a.data,data,sizeof data);
  a[0]=jv_l(samples);a[1]=jv_i(1);a[2]=jv_i(2);

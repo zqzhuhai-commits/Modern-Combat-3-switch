@@ -29,3 +29,10 @@ u64 padGetButtonsDown(PadState *);
 u64 padGetButtonsUp(PadState *);
 HidAnalogStickState padGetStickPos(PadState *,int);
 void hidGetTouchScreenStates(HidTouchScreenState *,int);
+/* Single-threaded real-JNI host tests. */
+typedef int Mutex;
+static inline void mutexInit(Mutex *m){*m=0;}
+static inline void mutexLock(Mutex *m){(void)m;}
+static inline void mutexUnlock(Mutex *m){(void)m;}
+enum {BreakReason_Panic=0};
+static inline void svcBreak(int reason,unsigned a,unsigned b){(void)reason;(void)a;(void)b;}

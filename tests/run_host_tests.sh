@@ -13,6 +13,9 @@ export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 "$CC" "${flags[@]}" tests/atc_upload_test.c nx-port-source/mc3_atc.c nx-port-source/mc3_gl.c -o test-build/atc_upload_test
 ./test-build/atc_upload_test
 echo 'ATC upload tests passed'
+"$CC" "${flags[@]}" '-DPORT_PAYLOAD_NAME="mc3_nx"' -include tests/stubs/jni_vm_platform.h \
+    tests/jni_string_lifetime_test.c runtime/source/jni_core.c -o test-build/jni_string_lifetime_test
+./test-build/jni_string_lifetime_test
 if [ "$#" -gt 0 ]; then
     "$CC" -shared -fPIC nx-port-source/mc3_api.c -o test-build/api.so
     python3 tests/check_native_exports.py "$1" test-build/api.so
