@@ -56,8 +56,6 @@ static void set_dir(const JMethod *m,const jvalue *a,jvalue *out,const char *tai
  *out=jv_l(jni_str(p));
  (void)m;(void)a;
 }
-static jvalue dev_query_false(const JMethod *m,const jvalue *a){return jv_z(0);(void)m;(void)a;}
-static jvalue dev_query_true(const JMethod *m,const jvalue *a){return jv_z(1);(void)m;(void)a;}
 int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  const char *c=m->cls->name,*n=m->name;
  if((!strcmp(c,"java/lang/System") && !strcmp(n,"currentTimeMillis")) || (is_mc3(c) && !strcmp(n,"GetCurrentTime"))){
@@ -65,7 +63,7 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  }
  if(!strcmp(c,"android/media/AudioTrack")){
   if(!strcmp(n,"<init>")){
-   if(self){self->v[0]=a[1].i;self->v[1]=((a[2].i&0xC)==0xC||(a[2].i&0x4)==0x4)?2:1;}
+   if(self){self->v[0]=a[1].i;self->v[1]=(a[2].i==12 || a[2].i==3)?2:1;}
    *out=jv_none();return 1;
   }
   if(!strcmp(n,"getMinBufferSize")){*out=jv_i(16384);return 1;}
@@ -79,10 +77,10 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
     size_t bytes=(size_t)len*2;
     unsigned char *buf=(unsigned char *)malloc(bytes?bytes:1);
     if(!buf){*out=jv_i(-2);return 1;}
-    const short *s=(const short *)o->a.data;
+    const short *s=(const short *)o->a.data+off;
     for(int i=0;i<len;i++){buf[2*i]=(unsigned char)s[i];buf[2*i+1]=(unsigned char)((unsigned)s[i]>>8);}
     int r=mc3_audio_write(buf,(unsigned)bytes,rate,channels);
-    free(buf);*out=jv_i(r);return 1;
+    free(buf);*out=jv_i(r<0?r:r/2);return 1;
    }
    *out=jv_i(mc3_audio_write((unsigned char *)o->a.data+off,len,rate,channels));return 1;
   }
@@ -96,6 +94,15 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
   if(!strcmp(n,"getNetworkCountryIso")||!strcmp(n,"getSimCountryIso")){*out=jv_l(jni_str("us"));return 1;}
   if(!strcmp(n,"getSimState")){*out=jv_i(1);return 1;}
   if(!strcmp(n,"isNetworkRoaming")){*out=jv_z(0);return 1;}
+ }
+ /* Android Activity callbacks can be looked up on the base class, before
+  * the game-class filter below. Briefings use this path. */
+ if((!strcmp(c,"android/app/Activity") || is_mc3(c)) &&
+    (!strcmp(n,"startActivity") || !strcmp(n,"startActivityForResult"))){
+  mc3_video_play();*out=jv_none();return 1;
+ }
+ if(!strcmp(c,"video/MyVideoView") && !strcmp(n,"playMovie")){
+  mc3_video_play();*out=jv_none();return 1;
  }
  /* The game's own classes and the Android glue it reaches for. */
  if(!is_mc3(c) && strncmp(c,"com/gameloft/glf/",17) && strcmp(c,"video/MyVideoView") && strcmp(c,"java/io/File") && strcmp(c,"android/content/Intent"))return 0;
@@ -168,8 +175,6 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  if(!strcmp(c,"android/content/Intent") && !strcmp(n,"<init>")){*out=jv_none();return 1;}
  if(!strcmp(c,"android/content/Intent") && (!strcmp(n,"setData")||!strcmp(n,"setClass")||!strcmp(n,"setAction")||
     !strcmp(n,"putExtra")||!strcmp(n,"setFlags")||!strcmp(n,"addFlags")||!strcmp(n,"setType"))){*out=jv_l(jni_singleton("android/content/Intent"));return 1;}
- /* Briefings surface through an Intent; treat startActivity as playMovie. */
- if(!strcmp(n,"startActivity") && !strcmp(c,"android/app/Activity")){extern void mc3_video_play(void);mc3_video_play();*out=jv_none();return 1;}
  if(!strcmp(n,"getContext")||!strcmp(n,"getInstance")){*out=jv_l(jni_singleton(MC3_CLASS "GloftM3HM"));return 1;}
  if(!strcmp(n,"getResources")){*out=jv_l(jni_singleton("android/content/res/Resources"));return 1;}
  if(!strcmp(n,"getAssets")){*out=jv_l(jni_singleton("android/content/res/AssetManager"));return 1;}
@@ -194,3 +199,4 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  return 0;
 }
 void mc3_jni_check(const char *stage){if(unknown!=reported){debugPrintf("[mc3/jni] stage=%s unimplemented calls=%u\n",stage,unknown);reported=unknown;}}
+

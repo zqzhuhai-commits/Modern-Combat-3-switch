@@ -38,7 +38,7 @@ static pad_fn do_pad_left, do_pad_right;
 static int joy;
 static int cx = MC3_WIDTH / 2, cy = MC3_HEIGHT / 2, click;
 static int swiping, swipe_to, swipe_tick;
-static int s_a, s_b, s_x, s_y, s_l1, s_r1, s_l2, s_r2, s_start, s_select;
+static int s_a, s_b, s_x, s_y, s_l1, s_r1, s_start, s_select;
 static int s_up, s_down, s_left, s_right;
 
 void mc3_input_init(void) {
@@ -68,6 +68,16 @@ static void swipe_end(void) {
 }
 
 void mc3_input_release(void) {
+    /* Release the Android key state as well as touchscreen gestures. */
+    int *states[] = {&s_a,&s_b,&s_x,&s_y,&s_l1,&s_r1,
+                     &s_start,&s_select,&s_up,&s_down,&s_left,&s_right};
+    const int codes[] = {K_CENTER,K_MOVE_END,K_BTN_X,K_BTN_Y,K_BTN_L1,K_BTN_R1,
+                         K_START,K_SELECT,K_UP,K_DOWN,K_LEFT,K_RIGHT};
+    for (unsigned i=0;i<sizeof(states)/sizeof(states[0]);i++) {
+        if (*states[i]) key(codes[i],0);
+        *states[i]=0;
+    }
+    pad_right(0, 0, 2);
     if (joy) pad_left(0, 0, 1);
     joy = 0;
     swipe_end();
@@ -87,13 +97,11 @@ int mc3_input_poll(void) {
     /* A = confirm, B = back, X = reload, Y = special, L1 = aim, R1 = fire,
      * ZL = grenade, ZR = reload, Plus = start, Minus = select. */
     held_key(keys, HidNpadButton_A, K_CENTER, &s_a);
-    held_key(keys, HidNpadButton_B, K_MOVE_END, &s_b);
-    held_key(keys, HidNpadButton_X, K_BTN_X, &s_x);
+    held_key(keys, HidNpadButton_B | HidNpadButton_ZL, K_MOVE_END, &s_b);
+    held_key(keys, HidNpadButton_X | HidNpadButton_ZR, K_BTN_X, &s_x);
     held_key(keys, HidNpadButton_Y, K_BTN_Y, &s_y);
     held_key(keys, HidNpadButton_L, K_BTN_L1, &s_l1);
     held_key(keys, HidNpadButton_R, K_BTN_R1, &s_r1);
-    held_key(keys, HidNpadButton_ZL, K_MOVE_END, &s_l2);
-    held_key(keys, HidNpadButton_ZR, K_BTN_X, &s_r2);
     held_key(keys, HidNpadButton_Plus, K_START, &s_start);
     held_key(keys, HidNpadButton_Minus, K_SELECT, &s_select);
     held_key(keys, HidNpadButton_Up, K_UP, &s_up);
@@ -144,3 +152,4 @@ int mc3_input_poll(void) {
     previous = now;
     return 0;
 }
+

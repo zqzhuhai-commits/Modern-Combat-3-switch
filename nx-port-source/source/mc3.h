@@ -23,6 +23,8 @@ extern int  mc3_input_poll(void);
 extern void mc3_input_release(void);
 extern void mc3_audio_pause(int pause);
 extern void mc3_audio_close(void);
+extern void mc3_video_play(void);
 extern void mc3_video_tick(void);
 extern void mc3_jni_check(const char *stage);
 #endif
+

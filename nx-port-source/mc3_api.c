@@ -18,7 +18,7 @@ int mc3_bind(Mc3Api *api, mc3_lookup lookup, void *module, mc3_log log) {
     BIND(on_load, "JNI_OnLoad");
     BIND(gl_init, MC3_PREFIX "glf_GL2JNILib_init");
     BIND(billing_init, MC3_PREFIX "android_ANMP_GloftM3HM_iab_InAppBilling_nativeInit");
-    BIND(video_init, MC3_PREFIX "video_MyVideoView_Init");
+    BIND(video_init, "Java_video_MyVideoView_Init");
     BIND(game_init, MC3_PREFIX "android_ANMP_GloftM3HM_GloftM3HM_Init");
     BIND(game_mc3_init, MC3_PREFIX "android_ANMP_GloftM3HM_GloftM3HM_nativeMC3Init");
     BIND(view_settings, MC3_PREFIX "glf_GL2JNILib_getViewSettings");
@@ -29,7 +29,8 @@ int mc3_bind(Mc3Api *api, mc3_lookup lookup, void *module, mc3_log log) {
     BIND(pad_left, MC3_PREFIX "glf_GL2JNILib_nativeSetTouchPadDTLeft");
     BIND(pad_right, MC3_PREFIX "glf_GL2JNILib_nativeSetTouchPadDT");
     BIND(is_gameplay, MC3_PREFIX "android_ANMP_GloftM3HM_GloftM3HM_isGamePlay");
-    BIND(video_finished, MC3_PREFIX "video_MyVideoView_SetFinished");
+    BIND(video_finished, "Java_video_MyVideoView_SetFinished");
 #undef BIND
     return missing;
 }
+
