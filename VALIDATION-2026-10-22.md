@@ -28,6 +28,6 @@
 
 没有 Switch 模拟器、固件环境或实机，因此没有运行完整原版游戏，也没有验证进入菜单、任务加载、绘制正确性、声音听感、存档、HOME/休眠。宿主接口测试与交叉编译不能替代模拟器或实机测试。
 
-本次构建生成的 mc3_nx.nsp 是裸 ExeFS 容器，不是可直接安装的完整 NSP。本次未提供打包密钥，未重新生成含 Program/Control/Meta NCA 的完整安装包。完整封装继续使用 nx-port-tools/package_installable.py；必须自备打包密钥和校验通过的资源。
+后续已使用用户提供的资源和打包文件生成 MC3-Switch-test-20261022.nsp（1,444,837,592 字节），包含 Program、Control、Meta NCA。独立解密校验通过：NCA 文件大小及标题 ID、FS Header 哈希、ExeFS 文件比对、Program/Control 全部六层 IVFC、包内三个原版资源 SHA-256、CNMT 中 Program/Control 的文件大小及完整哈希。构建过程的裸 ExeFS 容器仍不能当作完整 NSP。完整 NSP 尚未执行安装或启动测试。
 
 游戏文字仍固定英语，未在本次改为中文；原先未实现的 JNI / APK resource 查询仍有待运行时日志确认。过场仍为跳过实现。
