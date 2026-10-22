@@ -104,6 +104,26 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  if(!strcmp(c,"video/MyVideoView") && !strcmp(n,"playMovie")){
   mc3_video_play();*out=jv_none();return 1;
  }
+ if((!strcmp(c,"android/content/Context") || !strcmp(c,"android/app/Activity") || is_mc3(c)) && !strcmp(n,"getSystemService") && !strcmp(m->sig,"(Ljava/lang/String;)Ljava/lang/Object;")){
+  /* Never answer null: the engine dereferences the service without a check.
+   * window/input_method are the two EapRules answers the MC3 engine stores. */
+  const char *svc=a[0].l?jni_utf(a[0].l):"";
+  if(!strcmp(svc,"phone")||!strcmp(svc,"telephony"))*out=jv_l(jni_singleton("android/telephony/TelephonyManager"));
+  else if(!strcmp(svc,"window"))*out=jv_l(jni_singleton("android/view/WindowManager"));
+  else if(!strcmp(svc,"input_method")||!strcmp(svc,"inputmethod"))*out=jv_l(jni_singleton("android/view/inputmethod/InputMethodManager"));
+  else if(!strcmp(svc,"wifi"))*out=jv_l(jni_singleton("android/net/wifi/WifiManager"));
+  else if(!strcmp(svc,"audio"))*out=jv_l(jni_singleton("android/media/AudioManager"));
+  else if(!strcmp(svc,"power"))*out=jv_l(jni_singleton("android/os/PowerManager"));
+  else if(!strcmp(svc,"connectivity"))*out=jv_l(jni_singleton("android/net/ConnectivityManager"));
+  else *out=jv_l(jni_singleton("android/content/Context"));
+  return 1;
+ }
+ if(!strcmp(c,"android/os/Process") && !strcmp(n,"setThreadPriority") &&
+    !strcmp(m->sig,"(I)V")){
+  /* Android priorities do not share the Switch scheduler's scale. The
+   * runtime configures worker scheduling separately. */
+  *out=jv_none();return 1;
+ }
  /* The game's own classes and the Android glue it reaches for. */
  if(!is_mc3(c) && strncmp(c,"com/gameloft/glf/",17) && strcmp(c,"video/MyVideoView") && strcmp(c,"java/io/File") && strcmp(c,"android/content/Intent"))return 0;
  /* Xperia Play input path: this is what makes physical controls work. */
@@ -158,20 +178,6 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  }
  if(!strcmp(n,"setupPaths")){*out=jv_none();return 1;}
  if(!strcmp(n,"getData")){*out=jv_l(NULL);return 1;}
- if(!strcmp(n,"getSystemService") && !strcmp(m->sig,"(Ljava/lang/String;)Ljava/lang/Object;")){
-  /* Never answer null: the engine dereferences the service without a check.
-   * window/input_method are the two EapRules answers the MC3 engine stores. */
-  const char *svc=a[0].l?jni_utf(a[0].l):"";
-  if(!strcmp(svc,"phone")||!strcmp(svc,"telephony"))*out=jv_l(jni_singleton("android/telephony/TelephonyManager"));
-  else if(!strcmp(svc,"window"))*out=jv_l(jni_singleton("android/view/WindowManager"));
-  else if(!strcmp(svc,"input_method")||!strcmp(svc,"inputmethod"))*out=jv_l(jni_singleton("android/view/inputmethod/InputMethodManager"));
-  else if(!strcmp(svc,"wifi"))*out=jv_l(jni_singleton("android/net/wifi/WifiManager"));
-  else if(!strcmp(svc,"audio"))*out=jv_l(jni_singleton("android/media/AudioManager"));
-  else if(!strcmp(svc,"power"))*out=jv_l(jni_singleton("android/os/PowerManager"));
-  else if(!strcmp(svc,"connectivity"))*out=jv_l(jni_singleton("android/net/ConnectivityManager"));
-  else *out=jv_l(jni_singleton("android/content/Context"));
-  return 1;
- }
  if(!strcmp(c,"android/content/Intent") && !strcmp(n,"<init>")){*out=jv_none();return 1;}
  if(!strcmp(c,"android/content/Intent") && (!strcmp(n,"setData")||!strcmp(n,"setClass")||!strcmp(n,"setAction")||
     !strcmp(n,"putExtra")||!strcmp(n,"setFlags")||!strcmp(n,"addFlags")||!strcmp(n,"setType"))){*out=jv_l(jni_singleton("android/content/Intent"));return 1;}
@@ -179,7 +185,7 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  if(!strcmp(n,"getResources")){*out=jv_l(jni_singleton("android/content/res/Resources"));return 1;}
  if(!strcmp(n,"getAssets")){*out=jv_l(jni_singleton("android/content/res/AssetManager"));return 1;}
  if(!strcmp(n,"getCountry")||!strcmp(n,"getNetworkCountryIso")||!strcmp(n,"getSimCountryIso")){*out=jv_l(jni_str("US"));return 1;}
- if(!strcmp(n,"getLanguage")){*out=jv_l(jni_str("en"));return 1;}
+ if(!strcmp(n,"getLanguage") || (!strcmp(c,"com/gameloft/glf/GL2JNILib") && !strcmp(n,"getDeviceLanguage") && !strcmp(m->sig,"()Ljava/lang/String;"))){*out=jv_l(jni_str("en"));return 1;}
  if(!strcmp(n,"getPhoneModel")||!strcmp(n,"getDevice")){*out=jv_l(jni_str("Nintendo_Switch"));return 1;}
  if(!strcmp(n,"getCarrier")){*out=jv_l(jni_str("Nintendo"));return 1;}
  if(!strcmp(n,"getWidth")){*out=jv_i(MC3_WIDTH);return 1;}

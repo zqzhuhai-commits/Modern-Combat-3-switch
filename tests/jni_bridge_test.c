@@ -37,6 +37,18 @@ int main(void){
  a[1]=jv_i(4);a[2]=jv_i(2);invoke(&track,"android/media/AudioTrack","write","([SII)I",a,&out);assert(out.i==-2);
  a[1]=jv_i(48000);a[2]=jv_i(12);invoke(&track,"android/media/AudioTrack","<init>","(IIIIII)V",a,&out);assert(track.v[1]==2);
  JObj *bytes=jni_array('B',8);memcpy(bytes->a.data,"ABCDEFGH",8);a[0]=jv_l(bytes);a[1]=jv_i(4);a[2]=jv_i(4);invoke(&track,"android/media/AudioTrack","write","([BII)I",a,&out);assert(out.i==4&&!memcmp(written,"EFGH",4));
+ const char *contexts[]={"android/content/Context","android/app/Activity",MC3_CLASS "GloftM3HM"};
+ const char *services[]={"phone","window","input_method","audio","connectivity"};
+ const char *service_classes[]={"android/telephony/TelephonyManager","android/view/WindowManager","android/view/inputmethod/InputMethodManager","android/media/AudioManager","android/net/ConnectivityManager"};
+ for(unsigned i=0;i<3;i++)for(unsigned j=0;j<5;j++){
+  a[0]=jv_l(jni_str(services[j]));
+  assert(invoke(NULL,contexts[i],"getSystemService","(Ljava/lang/String;)Ljava/lang/Object;",a,&out));
+  assert(out.l && !strcmp(jni_utf(out.l),service_classes[j]));
+ }
+ assert(invoke(NULL,"com/gameloft/glf/GL2JNILib","getDeviceLanguage","()Ljava/lang/String;",a,&out));
+ assert(out.l && !strcmp(jni_utf(out.l),"en"));
+ assert(invoke(NULL,"android/os/Process","setThreadPriority","(I)V",a,&out));
+ assert(!invoke(NULL,"unrelated/Class","getSystemService","(Ljava/lang/String;)Ljava/lang/Object;",a,&out));
  g_mc3_api.video_finished=(uintptr_t)finish;
  const char *classes[]={"android/app/Activity",MC3_CLASS "GloftM3HM","video/MyVideoView"};
  const char *names[]={"startActivity","startActivityForResult","playMovie"};
