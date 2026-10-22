@@ -209,8 +209,12 @@ void *b_fopen(const char *path, const char *mode) {
   if (f && writes)
     dcr_dircache_forget();
   u64 ms = armTicksToNs(armGetSystemTick() - t0) / 1000000ull;
-  if (dcr_path_traced(path))
-    debugPrintf("[io] fopen(%s, %s) -> %p\n", path, mode, (void *)f);
+  if (dcr_path_traced(path)) {
+    /* Archives can be reopened for every asset; keep boot diagnostics bounded. */
+    static unsigned traced;
+    if (__atomic_fetch_add(&traced, 1, __ATOMIC_RELAXED) < 64)
+      debugPrintf("[io] fopen(%s, %s) -> %p\n", path, mode, (void *)f);
+  }
   /* One port's loading thread spent most of a 184 s load inside
    * fsFsOpenFile here (hardware); name the slow opens and who makes them. */
   static unsigned slow;

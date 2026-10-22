@@ -1133,9 +1133,24 @@ static const char *j_GetStringUTFChars(void *env, jobj_t s, jboolean *is_copy) {
   if (is_copy)
     *is_copy = 0;
   JObj *o = s;
-  return (is_obj(o) && o->kind == JK_STRING) ? o->s.utf : NULL;
+  if (!is_obj(o) || o->kind != JK_STRING)
+    return NULL;
+  /* Character-buffer lifetime ends at ReleaseStringUTFChars, independently
+   * of the local String reference. Returning o->s.utf let DeleteLocalRef
+   * free a buffer the engine was still using (corrupting OBB path prefixes). */
+  char *copy = strdup(o->s.utf);
+  if (!copy) {
+    jni_throw("java/lang/OutOfMemoryError", "GetStringUTFChars");
+    return NULL;
+  }
+  if (is_copy)
+    *is_copy = 1;
+  return copy;
 }
-static void j_ReleaseStringUTFChars(void *env, jobj_t s, const char *c) {}
+static void j_ReleaseStringUTFChars(void *env, jobj_t s, const char *c) {
+  /* s may already have had its local reference deleted. Do not inspect it. */
+  free((void *)c);
+}
 static void j_GetStringRegion(void *env, jobj_t s, jsize start, jsize len, jchar *buf) {
   JObj *o = s;
   if (!is_obj(o) || o->kind != JK_STRING || !buf)
