@@ -120,11 +120,13 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
   else *out=jv_l(jni_singleton("android/content/Context"));
   return 1;
  }
- /* The first frame asks GL2JNILib for a Java String, then consumes its
-  * UTF chars in native code. An unhandled call returns NULL and crashes.
+ /* Both activity and GL classes expose this callback in the reference port.
+  * Return a real String; the default unhandled object answer is NULL.
   * Keep the existing English resource language until localization is supported. */
- if(!strcmp(c,"com/gameloft/glf/GL2JNILib") &&
+ if((!strcmp(c,"com/gameloft/glf/GL2JNILib") || is_mc3(c)) &&
     !strcmp(n,"getDeviceLanguage") && !strcmp(m->sig,"()Ljava/lang/String;")){
+  static int logged;
+  if(!logged++){debugPrintf("[mc3/jni] getDeviceLanguage -> en\n");}
   *out=jv_l(jni_str("en"));return 1;
  }
  if(!strcmp(c,"android/os/Process") && !strcmp(n,"setThreadPriority") &&

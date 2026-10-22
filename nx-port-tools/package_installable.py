@@ -12,7 +12,9 @@ def main():
  p.add_argument('--packer',type=pathlib.Path,required=True,help='hacbrewpack executable')
  p.add_argument('--nacptool',type=pathlib.Path,required=True)
  p.add_argument('--output',type=pathlib.Path,required=True)
+ p.add_argument('--version',default='0.1.0',help='NACP display version (up to 15 ASCII bytes)')
  a=p.parse_args()
+ if not re.fullmatch(r'[A-Za-z0-9._-]{1,15}',a.version):raise SystemExit('Invalid display version')
  recipe=json.loads((ROOT/'loader/mc3.eapx.json').read_text())
  assets=[]
  for entry in recipe['extract']:
@@ -45,7 +47,7 @@ def main():
    try:dst.hardlink_to(src)
    except OSError:shutil.copyfile(src,dst)
   keyfile=work/'packaging.keys';keyfile.write_text(''.join(k+' = '+v+'\n' for k,v in keys.items()));keyfile.chmod(0o600)
-  subprocess.run([str(a.nacptool.resolve()),'--create',TITLE,'MC3 Switch Port','0.1.0',str(control/'control.nacp'),'--titleid='+TITLE_ID],check=True)
+  subprocess.run([str(a.nacptool.resolve()),'--create',TITLE,'MC3 Switch Port',a.version,str(control/'control.nacp'),'--titleid='+TITLE_ID],check=True)
   langs=['AmericanEnglish','BritishEnglish','Japanese','French','German','LatinAmericanSpanish','Spanish','Italian','Dutch','CanadianFrench','Portuguese','Russian','Korean','TraditionalChinese','SimplifiedChinese','BrazilianPortuguese']
   for lang in langs:shutil.copyfile(ROOT/'assets/mc3-icon-256.jpg',control/('icon_'+lang+'.dat'))
   cmd=[str(a.packer.resolve()),'-k',str(keyfile),'--exefsdir',str(exefs),'--romfsdir',str(romfs),'--controldir',str(control),'--tempdir',str(work/'temp'),'--ncadir',str(work/'nca'),'--nspdir',str(a.output.resolve()),'--nologo']

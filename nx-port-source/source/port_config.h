@@ -10,6 +10,7 @@
 #define RT_SCREEN_H 720
 #define RT_PATH_SD_SUBDIRS "sdcard"
 #define RT_PATH_EXTRA_DIRS "logs", "data", "data/files", "data/cache"
+#define RT_PATH_TRACE_EXTRA ".obb"
 #define RT_GL_CHECK 1
 #define RT_GL_SWAP_ENDS_FRAME 0
 #define RT_OPENSLES 0

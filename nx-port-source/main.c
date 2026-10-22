@@ -177,9 +177,11 @@ static int run_game(void){
   rt_applet_poll();if(!rt_focused()){svcSleepThread(50000000);continue;}
   if(mc3_input_poll())break;
   mc3_video_tick();
+  if(!frames)stage("first native frame begins (postload-test2)");
   call_v0(g_mc3_api.step);
   if(!b_eglSwapBuffers(display,surface)){stage("EGL swap failed");break;}
-  if(++frames%300==0){debugPrintf("[mc3/frame] presented=%u JNI_objects=%d SWP=%u\n",
+  ++frames;
+  if(frames==1 || frames==10 || frames==60 || frames%300==0){debugPrintf("[mc3/frame] presented=%u JNI_objects=%d SWP=%u\n",
      frames,jni_live_objects(),mc3_swp_count());log_flush_ring();}
  }
  stage("native shutdown");mc3_input_release();mc3_audio_close();running=0;
@@ -193,7 +195,7 @@ int main(int argc,char **argv){
  Result asset_rc=romfsMountFromCurrentProcess("game");
  packaged_resources=R_SUCCEEDED(asset_rc);
  debugPrintf("[mc3/data] packaged resources=%d mount=0x%08x\n",packaged_resources,(unsigned)asset_rc);
- debugPrintf("Modern Combat 3: Fallen Nation runtime / NSP bring-up / gameplay unverified\n");
+ debugPrintf("Modern Combat 3: Fallen Nation / postload-test2 / gameplay unverified\n");
  dcr_report_boot();if(chdir(root))debugPrintf("[mc3] root chdir failed\n");
  dcr_config_load();dcr_time_init();dcr_path_prepare_dirs();
  debugPrintf("A: attempt original game initialization. PLUS: exit.\n");log_flush_ring();

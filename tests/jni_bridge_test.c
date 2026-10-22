@@ -31,6 +31,8 @@ int main(void){
  /* First-frame language must be a real, nonempty Java string. */
  assert(invoke(NULL,"com/gameloft/glf/GL2JNILib","getDeviceLanguage","()Ljava/lang/String;",a,&out));
  assert(out.l && ((JObj *)out.l)->kind==JK_STRING && !strcmp(jni_utf(out.l),"en"));
+ assert(invoke(NULL,MC3_CLASS "GloftM3HM","getDeviceLanguage","()Ljava/lang/String;",a,&out));
+ assert(out.l && !strcmp(jni_utf(out.l),"en"));
  assert(!invoke(NULL,"unrelated/Class","getDeviceLanguage","()Ljava/lang/String;",a,&out));
  assert(!invoke(NULL,"com/gameloft/glf/GL2JNILib","getDeviceLanguage","()I",a,&out));
  const char *service_classes[]={"android/content/Context","android/app/Activity",MC3_CLASS "GloftM3HM"};
