@@ -56,3 +56,8 @@ python3 nx-port-tools/package_installable.py \
 2026-10-22 恢复时，原资源链接已返回 HTTP 403，当前没有重新生成完整 NSP。此前生成但未保存的完整封装产物已丢失；需要重新提供资源包后重打包。详见 `REVIEW-2026-10-22.md`。
 
 Android 和 Switchroot Linux 的独立运行说明分别保留在 `android/` 与 `l4t/`。
+
+
+## 最新本地验证（2026-10-22）
+
+已继续修复原版视频导出绑定、JNI 音频单位与偏移、视频回调、JNI class 参数及失焦手柄状态，并完成带 ASan/UBSan 的宿主接口测试、原版 ELF 的 15 项导出绑定检查和 Switch ARM32 交叉编译。运行 `bash tests/run_host_tests.sh /absolute/path/libModernCombat3.so` 可复验；省略原版库参数可只运行宿主接口测试。完整结果及未验证范围见 [VALIDATION-2026-10-22.md](VALIDATION-2026-10-22.md)。尚未运行 Switch 模拟器或实机，不能据此认定完整游戏启动通过。

@@ -14,6 +14,7 @@ void mc3_video_tick(void) {
     pending = 0;
     if (g_mc3_api.video_finished) {
         typedef void (*sf_fn)(void *, void *);
-        ((sf_fn)g_mc3_api.video_finished)(g_jni_env, (void *)(uintptr_t)0x42424242);
+        ((sf_fn)g_mc3_api.video_finished)(g_jni_env, jni_class("video/MyVideoView")->obj);
     }
 }
+

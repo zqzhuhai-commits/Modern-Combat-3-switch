@@ -141,10 +141,9 @@ typedef void (*v2e_fn)(void *,void *,void *);
 typedef void (*v4e_fn)(void *,void *,int,int);
 typedef void (*v1e2_fn)(void *,void *,int,int);
 static void call_v0(uintptr_t p){((v0_fn)p)();}
-static void call_v1(uintptr_t p,void *a){((v1e_fn)p)(a,NULL);}
 static void call_v2(uintptr_t p,void *a,void *b){((v1e_fn)p)(a,b);}
 static void call_v3(uintptr_t p,void *a,void *b){((v2e_fn)p)(a,b,NULL);}
-static void call_v4e(uintptr_t p,void *a,int x,int y){((v4e_fn)p)(a,NULL,x,y);}
+static void call_v4e(uintptr_t p,void *a,void *cls,int x,int y){((v4e_fn)p)(a,cls,x,y);}
 static int run_game(void){
  stage("initialize JNI object model");jni_init();
  extern int g_so_trace_ctors;g_so_trace_ctors=1;
@@ -153,8 +152,8 @@ static int run_game(void){
  debugPrintf("[mc3/display] output=%dx%d fullscreen; native asset coordinates=%dx%d\n",
              MC3_OUTPUT_WIDTH,MC3_OUTPUT_HEIGHT,MC3_WIDTH,MC3_HEIGHT);
  stage("JNI/native bootstrap begins");
- void *gl_class=jni_class("com/gameloft/glf/GL2JNILib");
- void *game_class=jni_class(MC3_CLASS "GloftM3HM");
+ void *gl_class=jni_class("com/gameloft/glf/GL2JNILib")->obj;
+ void *game_class=jni_class(MC3_CLASS "GloftM3HM")->obj;
  void *game_thiz=jni_singleton(MC3_CLASS "GloftM3HM");
  if(!gl_class||!game_class||!game_thiz){stage("class lookup failed");return -1;}
  void *env=g_jni_env,*vm=g_jni_vm;
@@ -166,11 +165,11 @@ static int run_game(void){
  mc3_input_init();
  call_v2(g_mc3_api.gl_init,env,gl_class);
  if(g_mc3_api.billing_init)call_v3(g_mc3_api.billing_init,env,game_class);
- if(g_mc3_api.video_init)call_v1(g_mc3_api.video_init,env);
+ if(g_mc3_api.video_init)call_v2(g_mc3_api.video_init,env,jni_class("video/MyVideoView")->obj);
  if(g_mc3_api.game_init)call_v2(g_mc3_api.game_init,env,game_thiz);
  if(g_mc3_api.game_mc3_init)call_v2(g_mc3_api.game_mc3_init,env,game_class);
  if(g_mc3_api.view_settings)call_v0(g_mc3_api.view_settings);
- if(g_mc3_api.resize)call_v4e(g_mc3_api.resize,env,MC3_WIDTH,MC3_HEIGHT);
+ if(g_mc3_api.resize)call_v4e(g_mc3_api.resize,env,gl_class,MC3_WIDTH,MC3_HEIGHT);
  stage("native bootstrap returned; entering frame loop");
  running=1;
  unsigned frames=0;
@@ -215,3 +214,4 @@ int main(int argc,char **argv){
  }
  log_flush_ring();return 1;
 }
+
