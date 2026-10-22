@@ -56,20 +56,16 @@ static void set_dir(const JMethod *m,const jvalue *a,jvalue *out,const char *tai
  *out=jv_l(jni_str(p));
  (void)m;(void)a;
 }
+static jvalue dev_query_false(const JMethod *m,const jvalue *a){return jv_z(0);(void)m;(void)a;}
+static jvalue dev_query_true(const JMethod *m,const jvalue *a){return jv_z(1);(void)m;(void)a;}
 int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  const char *c=m->cls->name,*n=m->name;
- if((!strcmp(c,"video/MyVideoView") && !strcmp(n,"playMovie")) ||
-    ((!strcmp(c,"android/app/Activity") || is_mc3(c)) &&
-     (!strcmp(n,"startActivity") || !strcmp(n,"startActivityForResult")))){
-  mc3_video_play();*out=jv_none();return 1;
- }
-
  if((!strcmp(c,"java/lang/System") && !strcmp(n,"currentTimeMillis")) || (is_mc3(c) && !strcmp(n,"GetCurrentTime"))){
   struct timespec ts;clock_gettime(CLOCK_REALTIME,&ts);*out=jv_j((int64_t)ts.tv_sec*1000+ts.tv_nsec/1000000);return 1;
  }
  if(!strcmp(c,"android/media/AudioTrack")){
   if(!strcmp(n,"<init>")){
-   if(self){self->v[0]=a[1].i;self->v[1]=(a[2].i==12 || a[2].i==3)?2:1;}
+   if(self){self->v[0]=a[1].i;self->v[1]=((a[2].i&0xC)==0xC||(a[2].i&0x4)==0x4)?2:1;}
    *out=jv_none();return 1;
   }
   if(!strcmp(n,"getMinBufferSize")){*out=jv_i(16384);return 1;}
@@ -83,10 +79,10 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
     size_t bytes=(size_t)len*2;
     unsigned char *buf=(unsigned char *)malloc(bytes?bytes:1);
     if(!buf){*out=jv_i(-2);return 1;}
-    const short *s=(const short *)o->a.data+off;
+    const short *s=(const short *)o->a.data;
     for(int i=0;i<len;i++){buf[2*i]=(unsigned char)s[i];buf[2*i+1]=(unsigned char)((unsigned)s[i]>>8);}
     int r=mc3_audio_write(buf,(unsigned)bytes,rate,channels);
-    free(buf);*out=jv_i(r<0?r:r/2);return 1;
+    free(buf);*out=jv_i(r);return 1;
    }
    *out=jv_i(mc3_audio_write((unsigned char *)o->a.data+off,len,rate,channels));return 1;
   }
@@ -102,11 +98,13 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
   if(!strcmp(n,"isNetworkRoaming")){*out=jv_z(0);return 1;}
  }
  /* The game's own classes and the Android glue it reaches for. */
- if(!is_mc3(c) && strncmp(c,"com/gameloft/glf/",17) && strcmp(c,"video/MyVideoView") && strcmp(c,"java/io/File"))return 0;
+ if(!is_mc3(c) && strncmp(c,"com/gameloft/glf/",17) && strcmp(c,"video/MyVideoView") && strcmp(c,"java/io/File") && strcmp(c,"android/content/Intent"))return 0;
  /* Xperia Play input path: this is what makes physical controls work. */
  if(!strcmp(n,"isXperiaPlay")){*out=jv_z(1);return 1;}
+ /* The device is opened; the engine gates the physical-key path on this. */
+ if(!strcmp(n,"isDeviceOpened")){*out=jv_z(1);return 1;}
  /* The engine keeps device-class queries in one obfuscated family. */
- if(!strcmp(n,"isDeviceOpened")||!strcmp(n,"isHTCDevice")||!strcmp(n,"isSamsung_I9250")||
+ if(!strcmp(n,"isHTCDevice")||!strcmp(n,"isSamsung_I9250")||
     !strcmp(n,"isSamsung_I510")||!strcmp(n,"isSamsung_P7100")||!strcmp(n,"isAsus_TF201")||
     !strcmp(n,"isHTC_Nexus9")||!strcmp(n,"isHoneycombDevice")||!strcmp(n,"isIceCreamSandwich")||
     !strcmp(n,"mustSwapButtons")||!strcmp(n,"isFirstRunOfTheDay")||!strcmp(n,"useGeneration0")||
@@ -119,9 +117,25 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  if(!strcmp(n,"enableGyroscope")||!strcmp(n,"enableAccelerometer")||!strcmp(n,"setCalibratingGyro")){
   *out=jv_none();return 1;
  }
+ /* Loading-overlay callbacks and friends. EapRules registers every one of
+  * these on the GloftM3HM class; the engine drives its boot state machine
+  * through them, so answer instead of logging. */
+ if(!strcmp(n,"showloading")||!strcmp(n,"showDisclaimer")||!strcmp(n,"showCantGoBackPopup")||
+    !strcmp(n,"showParentButton")||!strcmp(n,"ShowAlert")||!strcmp(n,"openBrowser")||
+    !strcmp(n,"sendURLRequest")||!strcmp(n,"openGLLive")||!strcmp(n,"openIGP")){*out=jv_none();return 1;}
+ if(!strcmp(n,"hideloading")||!strcmp(n,"hidelogoscreen")||!strcmp(n,"hideParentButton")||
+    !strcmp(n,"deleteOldData")||!strcmp(n,"setViewSettings")||!strcmp(n,"setCurrentContext")){*out=jv_none();return 1;}
+ if(!strcmp(n,"hasServerResponse")){*out=jv_z(0);return 1;}
+ if(!strcmp(n,"getServerResponse")){*out=jv_l(jni_str(""));return 1;}
+ if(!strcmp(n,"IsWifiEnabled")||!strcmp(n,"IsWifiOr3GEnabled")){*out=jv_i(0);return 1;}
+ if(!strcmp(n,"CheckOffensive")){*out=jv_z(0);return 1;}
+ if(!strcmp(n,"getProcessorNum")){*out=jv_i(3);return 1;}
+ if(!strcmp(n,"getDeviceName")){*out=jv_l(jni_str("Xperia Play"));return 1;}
+ if(!strcmp(n,"getDeviceFW")){*out=jv_l(jni_str("4.1.2"));return 1;}
+ if(!strcmp(n,"getUserAgent")){*out=jv_l(jni_str("Mozilla/5.0 (Linux; Android 4.1.2)"));return 1;}
  if(!strcmp(n,"Exit") || !strcmp(n,"sendAppToBackground")){debugPrintf("[mc3] original game requested exit\n");log_flush_ring();exit(0);}
- if(!strcmp(n,"getZipName")){char p[768];snprintf(p,sizeof p,"%s/" MC3_MAIN_OBB,mc3_resource_root());*out=jv_l(jni_str(p));return 1;}
- if(!strcmp(n,"getPatchFileLocation")){char p[768];snprintf(p,sizeof p,"%s/" MC3_PATCH_OBB,mc3_resource_root());*out=jv_l(jni_str(p));return 1;}
+ if(!strcmp(n,"getZipName")){set_dir(m,a,out,"/" MC3_MAIN_OBB);return 1;}
+ if(!strcmp(n,"getPatchFileLocation")){set_dir(m,a,out,"/" MC3_PATCH_OBB);return 1;}
  if(!strcmp(n,"getSaveFolder")){set_dir(m,a,out,"/data");return 1;}
  if(!strcmp(n,"getSDFolder")||!strcmp(n,"getFilesDir")){set_dir(m,a,out,NULL);return 1;}
  if(!strcmp(n,"getPath")||!strcmp(n,"getAbsolutePath")){*out=jv_l(jni_str("/sdcard/Android/obb/" MC3_PKG "/"));return 1;}
@@ -138,8 +152,24 @@ int port_jni_invoke(JObj *self,JMethod *m,const jvalue *a,jvalue *out){
  if(!strcmp(n,"setupPaths")){*out=jv_none();return 1;}
  if(!strcmp(n,"getData")){*out=jv_l(NULL);return 1;}
  if(!strcmp(n,"getSystemService") && !strcmp(m->sig,"(Ljava/lang/String;)Ljava/lang/Object;")){
-  *out=jv_l(!strcmp(jni_utf(a[0].l),"phone")?jni_singleton("android/telephony/TelephonyManager"):NULL);return 1;
+  /* Never answer null: the engine dereferences the service without a check.
+   * window/input_method are the two EapRules answers the MC3 engine stores. */
+  const char *svc=a[0].l?jni_utf(a[0].l):"";
+  if(!strcmp(svc,"phone")||!strcmp(svc,"telephony"))*out=jv_l(jni_singleton("android/telephony/TelephonyManager"));
+  else if(!strcmp(svc,"window"))*out=jv_l(jni_singleton("android/view/WindowManager"));
+  else if(!strcmp(svc,"input_method")||!strcmp(svc,"inputmethod"))*out=jv_l(jni_singleton("android/view/inputmethod/InputMethodManager"));
+  else if(!strcmp(svc,"wifi"))*out=jv_l(jni_singleton("android/net/wifi/WifiManager"));
+  else if(!strcmp(svc,"audio"))*out=jv_l(jni_singleton("android/media/AudioManager"));
+  else if(!strcmp(svc,"power"))*out=jv_l(jni_singleton("android/os/PowerManager"));
+  else if(!strcmp(svc,"connectivity"))*out=jv_l(jni_singleton("android/net/ConnectivityManager"));
+  else *out=jv_l(jni_singleton("android/content/Context"));
+  return 1;
  }
+ if(!strcmp(c,"android/content/Intent") && !strcmp(n,"<init>")){*out=jv_none();return 1;}
+ if(!strcmp(c,"android/content/Intent") && (!strcmp(n,"setData")||!strcmp(n,"setClass")||!strcmp(n,"setAction")||
+    !strcmp(n,"putExtra")||!strcmp(n,"setFlags")||!strcmp(n,"addFlags")||!strcmp(n,"setType"))){*out=jv_l(jni_singleton("android/content/Intent"));return 1;}
+ /* Briefings surface through an Intent; treat startActivity as playMovie. */
+ if(!strcmp(n,"startActivity") && !strcmp(c,"android/app/Activity")){extern void mc3_video_play(void);mc3_video_play();*out=jv_none();return 1;}
  if(!strcmp(n,"getContext")||!strcmp(n,"getInstance")){*out=jv_l(jni_singleton(MC3_CLASS "GloftM3HM"));return 1;}
  if(!strcmp(n,"getResources")){*out=jv_l(jni_singleton("android/content/res/Resources"));return 1;}
  if(!strcmp(n,"getAssets")){*out=jv_l(jni_singleton("android/content/res/AssetManager"));return 1;}
